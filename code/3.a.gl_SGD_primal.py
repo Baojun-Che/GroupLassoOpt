@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from basic_setting import SGD_hyperparams, compute_group_sparsity
+import time
+from utility import compute_nonzero_ratio, cos_annealing
 
 def subgrad_regular(x):
     n, l = x.shape
@@ -12,7 +13,7 @@ def subgrad_regular(x):
         if norm_row_i > 1e-6:
             grad[i, :] = row_i / norm_row_i
         else:
-            grad[i, :] = row_i / (norm_row_i + 1)
+            grad[i, :] = 0.0
     return grad
 
 def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
@@ -21,40 +22,47 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
     m, n = A.shape
     _, l = b.shape
     
-    max_iter = 10000
-    dt_max = 1e-4
-    alpha = 0.001
+    max_iter = 20000
+    dt_max = 1.0
     tol = 0.01
     window_size = 1000
     
     f_values = []
     
-    obj = 0.5 * np.sum((A @ x - b)**2) + mu * np.sum(np.linalg.norm(x, axis=1))
+    r = A @ x - b
+    obj = 0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
     f_values.append(obj)
     
-    x_best = x.copy()
+    x_opt = x.copy()
     best_obj = obj
     
     iter_count = 0
     
     for k in range(max_iter):
 
-        if (k+1) % (max_iter/10) == 0:
-            print(f"Running {k+1} iteration")
-        d = A @ x - b
-        grad_smooth = A.T @ d
+        # if (k+1) % (max_iter/10) == 0:
+        #     print(f"Running {k+1} iteration")
+        #     print(f"Step size = {dt}")
+
+        grad_smooth = A.T @ r
         subgrad_non_smooth = mu * subgrad_regular(x)
         subgrad_total = grad_smooth + subgrad_non_smooth 
         
-        dt = min(dt_max, alpha / np.sqrt(k+1))
+        # estimate Polyak step size
+        row_norms = np.linalg.norm(grad_smooth, axis=1)
+        theta = min(1.0, mu / (1e-6 + row_norms.max())  )
+        f_lb = -0.5 * theta**2 * np.sum(r * r) - theta * np.sum(b * r)
+
+        dt = min( dt_max, (obj - f_lb) / np.sum(subgrad_total ** 2) )
         x = x - dt * subgrad_total 
         
-        obj = 0.5 * np.sum(d**2) + mu * np.sum(np.linalg.norm(x, axis=1))
+        r = A @ x - b
+        obj = 0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
         f_values.append(obj)
         
         if obj < best_obj:
             best_obj = obj
-            x_best = x.copy()
+            x_opt = x.copy()
         
         iter_count += 1
         
@@ -63,7 +71,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
             if max(recent) - min(recent) <= tol:
                 break
     
-    return x_best, iter_count, f_values
+    return x_opt, iter_count, f_values
 
 
 
@@ -93,11 +101,19 @@ if __name__ == "__main__":
     ########## 测试SGD算法 ##########
 
     x0 = np.zeros((n, l))
-    x_best, iter_count, f_values = gl_SGD_primal(x0, A, b, mu)
     
+    start = time.time()
+    x_opt, iter_count, f_values = gl_SGD_primal(x0, A, b, mu)
+    end = time.time()
+
+    f_opt = min(f_values)
+    regular_x_opt = mu * np.sum(np.linalg.norm(x_opt, axis=1))
+
+    print(f"运行时间: {end - start:.6f} 秒")
     print(f"迭代次数: {iter_count}")
-    print(f"求得目标函数最小值: {min(f_values):.6f}")
-    print(f"解的稀疏度: {compute_group_sparsity(x_best)}")
+    print(f"求得目标函数最小值: {f_opt:.6f}")
+    print(f"正则项: {regular_x_opt:.6f}, 光滑项: {f_opt - regular_x_opt:.6f}")
+    print(f"解的非零元比例: {compute_nonzero_ratio(x_opt)}")
 
     plt.figure(figsize=(8, 6))
     plt.semilogy(f_values)

@@ -2,7 +2,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from basic_setting import SGD_hyperparams, compute_group_sparsity
+from utility import SGD_hyperparams, compute_group_sparsity
 
 def smoothed_grad_regular(x, eps):
     n, l = x.shape
@@ -15,7 +15,7 @@ def smoothed_grad_regular(x, eps):
 
 def cos_annealing(iter, max_iter, dt_min, dt_max):
     
-    iter_cos_decay = round(max_iter * 0.5)
+    iter_cos_decay = round(max_iter)
     if iter >= iter_cos_decay:
         return dt_min
     else:
@@ -28,12 +28,12 @@ def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
     _, l = b.shape
     
     eps = 1e-3
-    Lip = np.linalg.norm(A, ord=2) ** 2 + mu * eps  
+    Lip = np.linalg.norm(A, ord=2) ** 2 + mu / eps  
     print("光滑化后的Lip常数= ", Lip)
 
     max_iter = 10000
     dt_max = 1e-3
-    dt_min = 0.5 / Lip
+    dt_min = 1.0 / Lip
     tol = 0.01
     window_size = 1000
     
@@ -96,20 +96,21 @@ if __name__ == "__main__":
 
     b = A @ u
     mu = 0.01
-
+    
+    print(f"参考稀疏度: { compute_group_sparsity(u)}")
     print(f"目标函数的全局最小值应不大于: { mu * np.sum(np.linalg.norm(u, axis=1))}")
 
     ########## 测试SGD算法 ##########
 
-    x0 = np.zeros((n, l))
-    x_best, iter_count, f_values = gl_GD_primal(x0, A, b, mu)
+    x0 = np.random.randn(n, l)
+    x_opt, iter_count, f_values = gl_GD_primal(x0, A, b, mu)
     
     print(f"迭代次数: {iter_count}")
     print(f"求得目标函数最小值: {min(f_values):.6f}")
-    print(f"解的稀疏度: {compute_group_sparsity(x_best)}")
+    print(f"解的稀疏度: {compute_group_sparsity(x_opt)}")
 
     plt.figure(figsize=(8, 6))
-    plt.semilogy(f_values)
+    plt.semilogy(f_values[1000:10000])
     plt.xlabel('Iteration')
     plt.ylabel('Objective Function Value')
     plt.grid(True)
