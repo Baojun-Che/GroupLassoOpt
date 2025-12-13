@@ -13,7 +13,7 @@ def subgrad_regular(x):
         if norm_row_i > 1e-6:
             grad[i, :] = row_i / norm_row_i
         else:
-            grad[i, :] = 0.0
+            grad[i, :] = row_i / (1 + norm_row_i)
     return grad
 
 def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
@@ -22,54 +22,68 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
     m, n = A.shape
     _, l = b.shape
     
-    max_iter = 20000
-    dt_max = 1.0
-    tol = 0.01
-    window_size = 1000
+    N_out_iter = 10
+    max_iter_total = 10000
+    max_iter_inner = 500
+    alpha = 0.5
+    dt_max = 0.001
+    tol = 1e-3
     
     f_values = []
     
-    r = A @ x - b
-    obj = 0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
-    f_values.append(obj)
-    
-    x_opt = x.copy()
-    best_obj = obj
+    x_opt = np.zeros_like(x)
+    best_obj = 0.5 * np.sum(b**2)
     
     iter_count = 0
-    
-    for k in range(max_iter):
+    flag = False
 
-        # if (k+1) % (max_iter/10) == 0:
-        #     print(f"Running {k+1} iteration")
-        #     print(f"Step size = {dt}")
+    for out_iter in range(N_out_iter):
 
-        grad_smooth = A.T @ r
-        subgrad_non_smooth = mu * subgrad_regular(x)
-        subgrad_total = grad_smooth + subgrad_non_smooth 
-        
-        # estimate Polyak step size
-        row_norms = np.linalg.norm(grad_smooth, axis=1)
-        theta = min(1.0, mu / (1e-6 + row_norms.max())  )
-        f_lb = -0.5 * theta**2 * np.sum(r * r) - theta * np.sum(b * r)
+        mu_current = cos_annealing(out_iter, N_out_iter - 1, mu, max(2.0, mu))
+        # print(f"Iterations: {iter_count}, current mu={mu_current}")
 
-        dt = min( dt_max, (obj - f_lb) / np.sum(subgrad_total ** 2) )
-        x = x - dt * subgrad_total 
-        
-        r = A @ x - b
-        obj = 0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
-        f_values.append(obj)
-        
-        if obj < best_obj:
-            best_obj = obj
-            x_opt = x.copy()
-        
-        iter_count += 1
-        
-        if len(f_values) >= window_size:
-            recent = f_values[-window_size:]
-            if max(recent) - min(recent) <= tol:
+        obj_current_old = 0.0
+
+        if out_iter == N_out_iter - 1:
+            flag = True
+            tol = 1e-7
+            max_iter_inner = 5000
+
+        for k in range(max_iter_inner):
+
+            r = A @ x - b
+            f_smooth = 0.5 * np.sum(r**2)
+            f_regular = np.sum(np.linalg.norm(x, axis=1))
+
+            obj = f_smooth + mu * f_regular
+            f_values.append(obj)
+            if obj < best_obj:
+                x_opt = x
+                best_obj = obj
+                
+            obj_current_new = f_smooth + mu_current * f_regular
+            if np.abs(obj_current_new - obj_current_old) < tol:
                 break
+
+            obj_current_old = obj_current_new
+
+            grad_smooth = A.T @ r
+            subgrad_non_smooth = mu_current * subgrad_regular(x)
+            subgrad_total = grad_smooth + subgrad_non_smooth 
+            
+            dt = min( dt_max, alpha / (k+1) )
+
+            x = x - dt * subgrad_total
+            iter_count += 1
+            if iter_count >= max_iter_total:
+                flag = True
+                break
+        
+        if flag :
+            break
+
+        tol = max(tol*0.8, 1e-6)
+        dt_max *= 0.9      
     
     return x_opt, iter_count, f_values
 
