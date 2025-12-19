@@ -2,8 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from gl_cvx_mosek import gl_cvx_mosek
-# def obj_func(x: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
-#     return 0.5 * np.sum((A @ x - b)**2) + mu * np.sum(np.linalg.norm(x, axis=1))
 
 def compute_nonzero_ratio(x, tol_factor=1e-6):
     x_flat = np.abs(x).ravel()
@@ -17,6 +15,11 @@ def compute_nonzero_ratio(x, tol_factor=1e-6):
     total = x_flat.size
     return num_nonzero / total
 
+def prox_group_lasso(z, k):
+    norms = np.linalg.norm(z, axis=1, keepdims=True)
+    scaling = np.maximum(0.0, 1.0 - k / (norms + 1e-8))
+    return scaling * z
+
 def cos_annealing(iter, max_iter, dt_min, dt_max):
     
     iter_cos_decay = round(max_iter)
@@ -24,16 +27,8 @@ def cos_annealing(iter, max_iter, dt_min, dt_max):
         return dt_min
     else:
         return dt_min + (1 + math.cos(math.pi * (iter/iter_cos_decay) ) ) * (dt_max-dt_min) /2
-    
-# def result_struct_init_():
-#     result = {
-#         'f_values' : [], # values of object function
-#         'sparsities': [],
-#         ''
-#     }
-#     return result
 
-def test_data_init(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse = 0.1):
+def test_data_init(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse = 0.1, save_data = False):
     
     np.random.seed(seed)
 
@@ -54,19 +49,21 @@ def test_data_init(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse =
     ########## 测试CVX-mosek ##########
 
     x0 = np.zeros((n, l))
-    x_opt, iter_count, f_values = gl_cvx_mosek(x0, A, b, mu)
+    x_opt, _, f_values = gl_cvx_mosek(x0, A, b, mu)
     
-    print(f"求得目标函数最小值: {min(f_values):.6f}")
+    print(f"CVX-mosek 求得目标函数最小值: {min(f_values):.6f}")
     print(f"解的稀疏度: {compute_nonzero_ratio(x_opt)}")
 
-    with open('code/datas/obj_opt.txt', 'w') as f:
-        f.write(str(min(f_values)))
+    if save_data:
+        with open('code/datas/obj_opt.txt', 'w') as f:
+            f.write(str(min(f_values)))
 
-    np.save("code/datas/opt_mosek.npy", x_opt)
-    np.save("code/datas/A.npy", A)
-    np.save("code/datas/b.npy", b)
-    np.save("code/datas/u.npy", u)
-    np.save("code/datas/u.npy", u)
+        np.save("code/datas/opt_mosek.npy", x_opt)
+        np.save("code/datas/A.npy", A)
+        np.save("code/datas/b.npy", b)
+        np.save("code/datas/u.npy", u)
+    
+    return A, b, u
 
 def plot_relative_error(f_values, fig_name, obj_opt = -1):
 
@@ -88,8 +85,21 @@ def plot_relative_error(f_values, fig_name, obj_opt = -1):
     plt.grid(True, which="both", ls="--", linewidth=0.5)
     
     plt.tight_layout()
-    plt.savefig(fig_name + '.pdf', format='pdf')
-    plt.close()  # 避免内存累积
+    plt.savefig('doc/figs/'+ fig_name + '.pdf', format='pdf')
+    plt.close()
+
+def recover_primal_solution(Z: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float, eps = 1e-6):
+
+    m, n = A.shape
+    _, l = b.shape
+    active = np.linalg.norm(Z, axis=1) >= mu - 1e-6
+    x = np.zeros((n, l))
+
+    if np.any(active):
+        A_active = A[:, active]  # m x n_active
+        x_active_part = np.linalg.lstsq(A_active, b, rcond=None)[0]
+        x[active, :] = x_active_part
+    return x
 
 if __name__ == "__main__":
     test_data_init()

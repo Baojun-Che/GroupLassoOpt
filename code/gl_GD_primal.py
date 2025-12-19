@@ -79,7 +79,7 @@ def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
             grad_non_smooth = mu_current * smoothed_grad_regular(x, eps)
             grad_total = grad_smooth + grad_non_smooth 
             
-            if np.sum(grad_total**2) < tol*100:
+            if np.sqrt(np.sum(grad_total**2)) < tol*100:
                 break
 
             x = x - dt * grad_total
@@ -91,7 +91,13 @@ def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
         if flag :
             break
 
-    
+    r = A @ x - b
+    obj =  0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
+    f_values.append(obj)
+    if obj < best_obj:
+        x_opt = x
+        best_obj = obj
+
     return x_opt, iter_count, f_values
 
 
