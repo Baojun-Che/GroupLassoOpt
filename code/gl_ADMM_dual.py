@@ -1,6 +1,6 @@
 import numpy as np
 import time
-import utility
+import utils
 
 def proj_group_l2_ball(Q, mu):
     """Project each row of Q onto l2-ball of radius mu."""
@@ -101,6 +101,6 @@ if __name__ == "__main__":
     print(f"迭代次数: {iter_count}")
     print(f"求得目标函数最小值: {f_opt:.6f}")
     print(f"正则项: {regular_x_opt:.6f}, 光滑项: {f_opt - regular_x_opt:.6f}")
-    print(f"解的非零元比例: {utility.compute_nonzero_ratio(x_opt)}")
+    print(f"解的非零元比例: {utils.compute_nonzero_ratio(x_opt)}")
 
-    utility.plot_relative_error(f_values, "ADMM_dual", 0.6705752210556729)
+    utils.plot_relative_error(f_values, "ADMM_dual", 0.6705752210556729)

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import time
-from utility import compute_nonzero_ratio, cos_annealing
+from utils import compute_nonzero_ratio, cos_annealing
 
 def subgrad_regular(x):
     n, l = x.shape
@@ -34,13 +34,11 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
     x_opt = np.zeros_like(x)
     best_obj = 0.5 * np.sum(b**2)
     
-    iter_count = 0
     flag = False
 
     for out_iter in range(N_out_iter):
 
         mu_current = cos_annealing(out_iter, N_out_iter - 1, mu, max(2.0, mu))
-        # print(f"Iterations: {iter_count}, current mu={mu_current}")
 
         obj_current_old = 0.0
 
@@ -74,8 +72,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
             dt = min( dt_max, alpha / (k+1) )
 
             x = x - dt * subgrad_total
-            iter_count += 1
-            if iter_count >= max_iter_total:
+            if len(f_values)-1 >= max_iter_total:
                 flag = True
                 break
         
@@ -85,7 +82,17 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
         tol = max(tol*0.8, 1e-6)
         dt_max *= 0.9      
     
-    return x_opt, iter_count, f_values
+    r = A @ x - b
+    f_smooth = 0.5 * np.sum(r**2)
+    f_regular = np.sum(np.linalg.norm(x, axis=1))
+
+    obj = f_smooth + mu * f_regular
+    f_values.append(obj)
+    if obj < best_obj:
+        x_opt = x
+        best_obj = obj
+
+    return x_opt, len(f_values)-1, f_values
 
 
 

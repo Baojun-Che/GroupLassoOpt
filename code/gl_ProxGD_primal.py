@@ -1,9 +1,4 @@
-import math
-import time
 import numpy as np
-import matplotlib.pyplot as plt
-import os
-from utility import plot_relative_error, compute_nonzero_ratio
 
 def prox_group_lasso(z, dt, mu):
 
@@ -50,7 +45,7 @@ def gl_ProxGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
             flag = True
             max_iter_inner = 1000
 
-        print(f"Iterations: {iter_count}, current mu={mu_current}")
+        # print(f"Iterations: {iter_count}, current mu={mu_current}")
 
         for k in range(max_iter_inner):
 
@@ -75,41 +70,20 @@ def gl_ProxGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
             z = x - dt * grad_smooth
             x = prox_group_lasso(z, dt, mu_current)
 
-            if iter_count >= max_iter_total:
+            if len(f_values)-1 >= max_iter_total:
                 flag = True
                 break
         
         if flag :
             break
 
-    
-    return x_opt, iter_count, f_values
+    r = A @ x - b
+    obj =  0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
+    f_values.append(obj)
+    if obj < best_obj:
+        x_opt = x
+        best_obj = obj
+        
+    return x_opt, len(f_values)-1, f_values
 
 
-
-if __name__ == "__main__":
-
-    A = np.load("code/datas/A.npy")
-    b = np.load("code/datas/b.npy")
-    u = np.load("code/datas/u.npy")
-    mu = 0.01
-
-    m, n = A.shape
-    _, l = b.shape
-
-    x0 = np.zeros((n, l))
-    
-    start = time.time()
-    x_opt, iter_count, f_values = gl_ProxGD_primal(x0, A, b, mu)
-    end = time.time()
-
-    f_opt = min(f_values)
-    regular_x_opt = mu * np.sum(np.linalg.norm(x_opt, axis=1))
-
-    print(f"运行时间: {end - start:.6f} 秒")
-    print(f"迭代次数: {iter_count}")
-    print(f"求得目标函数最小值: {f_opt:.6f}")
-    print(f"正则项: {regular_x_opt:.6f}, 光滑项: {f_opt - regular_x_opt:.6f}")
-    print(f"解的非零元比例: {compute_nonzero_ratio(x_opt)}")
-
-    plot_relative_error(f_values, "doc/figs/PGD", 0.6705752210556729)

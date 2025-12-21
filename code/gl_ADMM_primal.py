@@ -1,6 +1,6 @@
 import numpy as np
 import time
-import utility
+import utils
 
 def proj_group_l2_ball(Q, mu):
     """Project each row of Q onto l2-ball of radius mu."""
@@ -49,7 +49,7 @@ def gl_ADMM_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
         x_new = M_inv @ temp
 
         Q = x_new + y / rho
-        z_new = utility.prox_group_lasso(Q, mu/rho)
+        z_new = utils.prox_group_lasso(Q, mu/rho)
 
         iter_count += 1
         x, z = x_new, z_new
@@ -101,6 +101,6 @@ if __name__ == "__main__":
     print(f"迭代次数: {iter_count}")
     print(f"求得目标函数最小值: {f_opt:.6f}")
     print(f"正则项: {regular_x_opt:.6f}, 光滑项: {f_opt - regular_x_opt:.6f}")
-    print(f"解的非零元比例: {utility.compute_nonzero_ratio(x_opt)}")
+    print(f"解的非零元比例: {utils.compute_nonzero_ratio(x_opt)}")
 
-    utility.plot_relative_error(f_values, "ADMM_primal", 0.6705752210556729)
+    utils.plot_relative_error(f_values, "ADMM_primal", 0.6705752210556729)
