@@ -2,7 +2,7 @@ import numpy as np
 import cvxpy as cp
 import utils, time
 
-def gl_cvx_gurobi(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
+def gl_cvx_gurobi(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float, opts:dict = {}):
 
     m, n = A.shape
     _, l = b.shape

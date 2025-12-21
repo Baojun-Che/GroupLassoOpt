@@ -3,7 +3,7 @@ import gurobipy as gp
 from gurobipy import GRB
 import time, utils
 
-def gl_gurobi(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
+def gl_gurobi(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float, opts:dict = {}):
    
     m, n = A.shape
     l = b.shape[1]

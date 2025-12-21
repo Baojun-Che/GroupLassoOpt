@@ -9,7 +9,7 @@ def prox_group_lasso(z, dt, mu):
     return scaling * z
 
 
-def gl_FProxGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
+def gl_FProxGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float, opts:dict = {}):
 
     norm_A = np.linalg.norm(A, ord=2)
     L = norm_A ** 2 
@@ -78,7 +78,7 @@ def gl_FProxGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
             iter_count += 1
             if obj < best_obj:
                 best_obj = obj
-                x_opt = x.copy()
+                x_opt = x.copy().copy()
 
             obj_current_new = f_smooth + mu_current * f_regular
             if np.abs(obj_current_new - obj_current_old) < tol:
@@ -98,7 +98,7 @@ def gl_FProxGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
     obj =  0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
     f_values.append(obj)
     if obj < best_obj:
-        x_opt = x
+        x_opt = x.copy()
         best_obj = obj
 
     return x_opt, len(f_values)-1, f_values

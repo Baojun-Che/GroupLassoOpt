@@ -31,7 +31,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
         ######## CVX-mosek ########
         method = "cvx_mosek"
         start = time.time()
-        x_mosek, _, _ = gl_cvx_mosek(x0, A, b, mu)
+        x_mosek, _, _ = gl_cvx_mosek(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_mosek - b)**2 ) + mu * np.sum(np.linalg.norm(x_mosek, axis=1))
         t = end - start
@@ -45,7 +45,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
         ######## cvx_gurobi, mosek_direct, gurobi_direct ########
         method = "cvx_gurobi"
         start = time.time()
-        x_opt, _, _ = gl_cvx_gurobi(x0, A, b, mu)
+        x_opt, _, _ = gl_cvx_gurobi(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_mosek - b)**2 ) + mu * np.sum(np.linalg.norm(x_mosek, axis=1))
         t = end - start
@@ -57,7 +57,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
 
         method = "mosek_direct"
         start = time.time()
-        x_opt, _, _ = gl_mosek(x0, A, b, mu)
+        x_opt, _, _ = gl_mosek(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_mosek - b)**2 ) + mu * np.sum(np.linalg.norm(x_mosek, axis=1))
         t = end - start
@@ -69,7 +69,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
         
         method = "gurobi_direct"
         start = time.time()
-        x_opt, _, _ = gl_gurobi(x0, A, b, mu)
+        x_opt, _, _ = gl_gurobi(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_mosek - b)**2 ) + mu * np.sum(np.linalg.norm(x_mosek, axis=1))
         t = end - start
@@ -83,7 +83,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
 
         method = "SGD_primal"
         start = time.time()
-        x_opt, iter_count, f_values = gl_SGD_primal(x0, A, b, mu)
+        x_opt, iter_count, f_values = gl_SGD_primal(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_opt - b)**2 ) + mu * np.sum(np.linalg.norm(x_opt, axis=1))
         err = utils.relative_error(x_mosek, x_opt)
@@ -97,7 +97,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
 
         method = "GD_primal"
         start = time.time()
-        x_opt, iter_count, f_values = gl_GD_primal(x0, A, b, mu)
+        x_opt, iter_count, f_values = gl_GD_primal(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_opt - b)**2 ) + mu * np.sum(np.linalg.norm(x_opt, axis=1))
         err = utils.relative_error(x_mosek, x_opt)
@@ -111,7 +111,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
 
         method = "ProxGD_primal"
         start = time.time()
-        x_opt, iter_count, f_values = gl_ProxGD_primal(x0, A, b, mu)
+        x_opt, iter_count, f_values = gl_ProxGD_primal(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_opt - b)**2 ) + mu * np.sum(np.linalg.norm(x_opt, axis=1))
         err = utils.relative_error(x_mosek, x_opt)
@@ -125,7 +125,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
 
         method = "FProxGD_primal"
         start = time.time()
-        x_opt, iter_count, f_values = gl_FProxGD_primal(x0, A, b, mu)
+        x_opt, iter_count, f_values = gl_FProxGD_primal(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_opt - b)**2 ) + mu * np.sum(np.linalg.norm(x_opt, axis=1))
         err = utils.relative_error(x_mosek, x_opt)
@@ -139,7 +139,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
 
         method = "ADMM_dual"
         start = time.time()
-        x_opt, iter_count, f_values = gl_ADMM_dual(x0, A, b, mu)
+        x_opt, iter_count, f_values = gl_ADMM_dual(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_opt - b)**2 ) + mu * np.sum(np.linalg.norm(x_opt, axis=1))
         err = utils.relative_error(x_mosek, x_opt)
@@ -153,7 +153,7 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
 
         method = "ADMM_primal"
         start = time.time()
-        x_opt, iter_count, f_values = gl_ADMM_primal(x0, A, b, mu)
+        x_opt, iter_count, f_values = gl_ADMM_primal(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_opt - b)**2 ) + mu * np.sum(np.linalg.norm(x_opt, axis=1))
         err = utils.relative_error(x_mosek, x_opt)

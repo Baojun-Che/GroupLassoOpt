@@ -1,6 +1,5 @@
 import numpy as np
-import time
-import utils
+import utils, time
 
 def proj_group_l2_ball(Q, mu):
     """Project each row of Q onto l2-ball of radius mu."""
@@ -8,72 +7,87 @@ def proj_group_l2_ball(Q, mu):
     scaling = np.minimum(1.0, mu / (norms + 1e-12))
     return scaling * Q
 
-def gl_ADMM_dual(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
-    
+def ALM_dual_opts_init():
+    opts = {
+        'sigma' : 10.0,        # 罚参数
+        'max_outer' : 20,      # 最大外层迭代
+        'max_inner' : 200,     # 每轮最大内层迭代
+        'tol_inner' : 1e-6,     # 内层收敛容差
+        'window_size' : 2,
+        'rho' : 2.0,
+        'tol_f' : 1e-7,
+    }
+    return opts
+
+def gl_ALM_dual(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float, opts:dict = {}):
+
+    x = x0.copy()
     m, n = A.shape
     _, l = b.shape
-
-    y = np.zeros((m, l))
     z = np.zeros((n, l))
-    x = np.copy(x0)
 
-    max_iter = 1000
-    rho = 100.0
-    tol_y = 1e-8
-    tol_res = 1e-8
-    
-    iter_count = 0
-    f_values = []
-    M = np.eye(m) + rho * (A @ A.T)
-
-    x_opt = np.zeros_like(x)
-    best_obj = 0.5 * np.sum(b**2)
-
-    try:
-        M_inv = np.linalg.inv(M)
-    except np.linalg.LinAlgError:
-        M_inv = np.linalg.pinv(M)
-
-    for k in range(max_iter):
+    if not opts:
+        opts = ALM_dual_opts_init()
         
-        r = A @ x - b
-        obj =  0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
-        f_values.append(obj)
+    sigma = opts['sigma']     
+    max_outer = opts['max_outer']      # 最大外层迭代
+    max_inner = opts['max_inner']     # 每轮最大内层迭代
+    tol_inner = opts['tol_inner']    # 内层收敛容差
+    window_size = opts['window_size']
+    rho = opts['rho']
+    tol_f = opts['tol_f']
 
-        if obj < best_obj:
-            x_opt = x
+
+    x_opt = x.copy()
+    best_obj = 0.5 * np.sum( (A@x - b)**2 )+ mu * np.sum(np.linalg.norm(x, axis=1))
+
+    f_values = [best_obj]
+
+    for k_out in range(max_outer):
+
+        M = np.eye(m) + sigma * (A @ A.T)
+        try:
+            M_inv = np.linalg.inv(M)
+        except np.linalg.LinAlgError:
+            M_inv = np.linalg.pinv(M)
+
+        z_prev = z.copy()
+
+        cnt_inner = 0
+        for k_in in range(max_inner):
+
+            cnt_inner += 1
+            temp = A @ x - sigma * A @ z - b
+            y = M_inv @ temp
+
+            Q = x / sigma - A.T @ y
+           
+            z = proj_group_l2_ball(Q, mu)
+
+            if np.linalg.norm(z - z_prev, 'fro') < tol_inner:
+                break
+            z_prev = z.copy()
+
+        # print(k_out, " ", cnt_inner)
+
+        x = x - sigma * (A.T @ y + z)
+
+        obj = 0.5 * np.sum( (A@x - b)**2 )+ mu * np.sum(np.linalg.norm(x, axis=1))
+        f_values.append(obj)
+        if obj< best_obj:
+            x_opt = x.copy()
             best_obj = obj
 
-        temp = r - rho * A @ z
-        y_new = M_inv @ temp
+        if len(f_values) >= window_size + 1:
+            recent_vals = f_values[-window_size-1:]
+            if np.max(recent_vals) - np.min(recent_vals) < tol_f:
+                break
 
-        Q = - A.T @ y_new + x / rho
-        z_new = proj_group_l2_ball(Q, mu)
+        sigma *= rho
+        tol_inner /= rho
 
-        iter_count += 1
 
-        if np.sum( (y -y_new)**2 ) < tol_y**2:
-            y, z = y_new, z_new
-            break
-        
-        y, z = y_new, z_new
-
-        res = A.T @ y + z
-
-        if np.sum( res**2 ) < tol_res**2:
-            break
-
-        x -= rho * res
-
-    r = A @ x - b
-    obj =  0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
-    f_values.append(obj)
-    if obj < best_obj:
-        x_opt = x
-        best_obj = obj
-    
-    return x_opt, iter_count, f_values
-
+    return x_opt, len(f_values)-1, f_values
 
 
 if __name__ == "__main__":
@@ -89,17 +103,14 @@ if __name__ == "__main__":
     x0 = np.zeros((n, l))
     
     start = time.time()
-    x_opt, iter_count, f_values = gl_ADMM_dual(x0, A, b, mu)
+    x_opt, iter_count, f_values = gl_ALM_dual(x0, A, b, mu)
     end = time.time()
 
+    f_opt = min(f_values)
     regular_x_opt = mu * np.sum(np.linalg.norm(x_opt, axis=1))
-    smooth_x_opt = 0.5 * np.sum((A @ x_opt - b)**2) 
-    f_opt = smooth_x_opt + regular_x_opt
 
     print(f"运行时间: {end - start:.6f} 秒")
     print(f"迭代次数: {iter_count}")
     print(f"求得目标函数最小值: {f_opt:.6f}")
     print(f"正则项: {regular_x_opt:.6f}, 光滑项: {f_opt - regular_x_opt:.6f}")
     print(f"解的非零元比例: {utils.compute_nonzero_ratio(x_opt)}")
-
-    utils.plot_relative_error(f_values, "ADMM_dual", 0.6705752210556729)

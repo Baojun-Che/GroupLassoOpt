@@ -1,22 +1,9 @@
 import numpy as np
 import mosek
-import utils, time
 from mosek.fusion import Model, Domain, Expr, ObjectiveSense, Matrix
 
-def gl_mosek(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
-    """
-    使用 MOSEK Fusion API 求解 Group LASSO 问题
-    min_{x} 0.5 * ||A x - b||_F^2 + mu * sum_i ||x(i,:)||_2
+def gl_mosek(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float, opts:dict = {}):
     
-    参数:
-        x0: 初始解（被忽略，仅用于接口一致性）
-        A: 矩阵 A (m x n)
-        b: 矩阵 b (m x l)
-        mu: 正则化参数
-    
-    返回:
-        [x_opt, -1, [opt_value]] 最优解、迭代次数（固定为-1）和最优值
-    """
     m, n = A.shape
     l = b.shape[1]
     
@@ -81,28 +68,3 @@ def gl_mosek(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
         
         return x_opt, -1, [opt_value]
 
-
-if __name__ == "__main__":
-
-    A = np.load("code/datas/A.npy")
-    b = np.load("code/datas/b.npy")
-    u = np.load("code/datas/u.npy")
-    mu = 0.01
-
-    m, n = A.shape
-    _, l = b.shape
-
-    x0 = np.zeros((n, l))
-    
-    start = time.time()
-    x_opt, iter_count, f_values = gl_mosek(x0, A, b, mu)
-    end = time.time()
-
-    f_opt = min(f_values)
-    regular_x_opt = mu * np.sum(np.linalg.norm(x_opt, axis=1))
-
-    print(f"运行时间: {end - start:.6f} 秒")
-    print(f"迭代次数: {iter_count}")
-    print(f"求得目标函数最小值: {f_opt:.6f}")
-    print(f"正则项: {regular_x_opt:.6f}, 光滑项: {f_opt - regular_x_opt:.6f}")
-    print(f"解的非零元比例: {utils.compute_nonzero_ratio(x_opt)}")

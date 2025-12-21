@@ -8,7 +8,7 @@ def proj_group_l2_ball(Q, mu):
     scaling = np.minimum(1.0, mu / (norms + 1e-12))
     return scaling * Q
 
-def gl_ADMM_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
+def gl_ADMM_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float, opts:dict = {}):
     
     m, n = A.shape
     _, l = b.shape
@@ -42,7 +42,7 @@ def gl_ADMM_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
         f_values.append(obj)
 
         if obj < best_obj:
-            x_opt = x
+            x_opt = x.copy()
             best_obj = obj
 
         temp = A.T @ b + rho * z - y
@@ -70,7 +70,7 @@ def gl_ADMM_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
     obj =  0.5 * np.sum(r**2) + mu * np.sum(np.linalg.norm(x, axis=1))
     f_values.append(obj)
     if obj < best_obj:
-        x_opt = x
+        x_opt = x.copy()
         best_obj = obj
     
     return x_opt, iter_count, f_values

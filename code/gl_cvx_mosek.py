@@ -1,7 +1,7 @@
 import numpy as np
 import cvxpy as cp
 
-def gl_cvx_mosek(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float):
+def gl_cvx_mosek(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float, opts:dict = {}):
     
     m, n = A.shape
     _, l = b.shape
