@@ -1,8 +1,4 @@
-import math
-import time
 import numpy as np
-import matplotlib.pyplot as plt
-import os
 
 def smoothed_grad_regular(x, eps):
     n, l = x.shape

@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import math
 from gl_cvx_mosek import gl_cvx_mosek
 
 def compute_nonzero_ratio(x, tol_factor=1e-6):
@@ -19,14 +18,6 @@ def prox_group_lasso(z, k):
     norms = np.linalg.norm(z, axis=1, keepdims=True)
     scaling = np.maximum(0.0, 1.0 - k / (norms + 1e-8))
     return scaling * z
-
-def cos_annealing(iter, max_iter, dt_min, dt_max):
-    
-    iter_cos_decay = round(max_iter)
-    if iter >= iter_cos_decay:
-        return dt_min
-    else:
-        return dt_min + (1 + math.cos(math.pi * (iter/iter_cos_decay) ) ) * (dt_max-dt_min) /2
 
 def test_data_init(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse = 0.1, save_data = False):
     

@@ -1,8 +1,13 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import os
-import time
-from utils import cos_annealing
+import math
+
+def cos_annealing(iter, max_iter, dt_min, dt_max):
+    
+    iter_cos_decay = max_iter
+    if iter >= iter_cos_decay:
+        return dt_min
+    else:
+        return dt_min + (1 + math.cos(math.pi * (iter/iter_cos_decay) ) ) * (dt_max-dt_min) /2
 
 def subgrad_regular(x):
     n, l = x.shape

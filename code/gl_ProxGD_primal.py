@@ -12,7 +12,7 @@ def prox_group_lasso(z, dt, mu):
 def gl_ProxGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu: float, opts:dict = {}):
     
     norm_A = np.linalg.norm(A, ord=2)
-    Lip =  norm_A**2 + 1e3 
+    Lip =  norm_A**2 
     
     x = x0.copy()
     m, n = A.shape

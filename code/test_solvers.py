@@ -10,6 +10,7 @@ from gl_SGD_primal import gl_SGD_primal
 from gl_GD_primal import gl_GD_primal
 from gl_ProxGD_primal import gl_ProxGD_primal
 from gl_FProxGD_primal import gl_FProxGD_primal
+from gl_ALM_dual import gl_ALM_dual
 from gl_ADMM_dual import gl_ADMM_dual
 from gl_ADMM_primal import gl_ADMM_primal
 
@@ -126,6 +127,20 @@ def test_all_solvers(seed = 97006855, n = 512, m = 256, l = 2, mu = 0.01, sparse
         method = "FProxGD_primal"
         start = time.time()
         x_opt, iter_count, f_values = gl_FProxGD_primal(x0, A, b, mu, {})
+        end = time.time()
+        f_opt = 0.5 * np.sum( (A @ x_opt - b)**2 ) + mu * np.sum(np.linalg.norm(x_opt, axis=1))
+        err = utils.relative_error(x_mosek, x_opt)
+        err_exact = utils.relative_error(u, x_opt)
+        t = end - start
+        sparsity = utils.compute_nonzero_ratio(x_opt)
+        line = ( f"{method:<15} | " f"{f_opt:>10.8f} " f"{err:>10.2e} " f"{err_exact:>13.2e} " f"{t:>8.4f} " f"{iter_count:>6d} "f"{sparsity:>9.4f}\n")
+        file.write(line)
+        f_values_array.append(f_values)
+        labels.append(method)
+        
+        method = "ALM_dual"
+        start = time.time()
+        x_opt, iter_count, f_values = gl_ALM_dual(x0, A, b, mu, {})
         end = time.time()
         f_opt = 0.5 * np.sum( (A @ x_opt - b)**2 ) + mu * np.sum(np.linalg.norm(x_opt, axis=1))
         err = utils.relative_error(x_mosek, x_opt)
